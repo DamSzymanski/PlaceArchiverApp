@@ -33,7 +33,7 @@ public class Login extends AppCompatActivity {
         catch (NullPointerException e){}
         fba=FirebaseAuth.getInstance();
         if(fba.getCurrentUser()!=null){
-            startActivity(new Intent(getApplicationContext(),MainActivity.class));
+            startActivity(new Intent(getApplicationContext(),MapsActivity.class));
             finish();
         }
         passwordET=findViewById(R.id.regLoginET);
@@ -67,10 +67,12 @@ public class Login extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if(task.isSuccessful()){
                             Toast.makeText(Login.this,"Pomyslnie zalogowano",Toast.LENGTH_LONG).show();
-                            startActivity(new Intent(getApplicationContext(),MainActivity.class));
+                            startActivity(new Intent(getApplicationContext(),MapsActivity.class));
                         }
                         else{
-                            Toast.makeText(Login.this,"Błąd logowania",Toast.LENGTH_LONG).show();
+                            String errorMessage = task.getException().getMessage();
+
+                            Toast.makeText(Login.this, "Error : " + errorMessage, Toast.LENGTH_LONG).show();
 
                         }
 
