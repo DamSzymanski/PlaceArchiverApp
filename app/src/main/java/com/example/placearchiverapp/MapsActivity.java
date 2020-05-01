@@ -1,36 +1,32 @@
 package com.example.placearchiverapp;
 
-import androidx.annotation.DrawableRes;
-import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
-import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -46,6 +42,7 @@ import com.google.firebase.database.ValueEventListener;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
     private GoogleMap mMap;
+    private MapView mapView;
     //Get location permisssion ID
     int PERMISSION_ID = 44;
     private FirebaseAuth fba;
@@ -56,6 +53,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //userLocationMarker
     MarkerOptions userMarkerOpts;
     Marker userMarker;
+    LatLng userLocation;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         fba = FirebaseAuth.getInstance();
@@ -76,10 +74,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
+        // Gets the MapView from the XML layout and creates it
+        mapView = (MapView) findViewById(R.id.mapa);
+        mapView.onCreate(savedInstanceState);
+
+
+        mapView.getMapAsync(this);
     }
 
 
@@ -95,16 +95,44 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+            @Override
+            public View getInfoWindow(Marker marker) {
+                return null;
+            }
+
+            @Override
+            public View getInfoContents(Marker marker) {
+                LinearLayout info = new LinearLayout(MapsActivity.this);
+                info.setOrientation(LinearLayout.VERTICAL);
+
+                TextView title = new TextView(MapsActivity.this);
+                title.setTextColor(Color.BLACK);
+                title.setGravity(Gravity.CENTER);
+                title.setTypeface(null, Typeface.BOLD);
+                title.setText(marker.getTitle());
+
+                TextView snippet = new TextView(MapsActivity.this);
+                snippet.setTextColor(Color.GRAY);
+                snippet.setText(marker.getSnippet());
+
+                info.addView(title);
+                info.addView(snippet);
+
+                return info;
+            }
+        });
 userMarker=mMap.addMarker(new MarkerOptions().position(new LatLng(0,0)).icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)).title("Tu jesteś"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(53.9357324,18.8865807), 6));
 
         LocationListener mLocationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-               // mMap.clear();
-                userMarker.setPosition(new LatLng(location.getLatitude(), location.getLongitude()));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(), location.getLongitude()), 15));
-                    findNearPlaces(new LatLng(location.getLatitude(), location.getLongitude()));
 
+                //until there is not hundrets of places it won't be filted
+                    findNearPlaces(new LatLng(location.getLatitude(), location.getLongitude()));
+                userMarker.setPosition(new LatLng(location.getLatitude(), location.getLongitude()));
+                userLocation=new LatLng(location.getLatitude(), location.getLongitude());
             }
             //unused but required methods
             @Override
@@ -140,14 +168,18 @@ userMarker=mMap.addMarker(new MarkerOptions().position(new LatLng(0,0)).icon(Bit
 
         //db conection
         try {
+            //gets all places
+            //until there is not hundrets of places it won't be filted
             places = FirebaseDatabase.getInstance().getReference("places");
-            places.addListenerForSingleValueEvent(valueEventListener);
+             places.addListenerForSingleValueEvent(valueEventListener);
 
-            // Query query3 = FirebaseDatabase.getInstance().getReference("places")
-            //   .orderByChild("ImageName")
-            //    .equalTo("wzr1.jpg");
-            //query3.addListenerForSingleValueEvent(valueEventListener);
-            //      Toast.makeText(MapsActivity.this,"eee"+query3.toString(),Toast.LENGTH_LONG).show();
+
+
+            //get places in range
+            /*Query query1 = FirebaseDatabase.getInstance().getReference("places")
+               .orderByChild("Longitude").startAt(userLocation.latitude-0.03).endAt(userLocation.latitude+0.03);
+            query1.addListenerForSingleValueEvent(valueEventListener);
+                  //Toast.makeText(MapsActivity.this,"eee"+userLocation.longitude,Toast.LENGTH_LONG).show();*/
 
         } catch (Exception ex) {
             Toast.makeText(MapsActivity.this, "e" + ex.getMessage(), Toast.LENGTH_LONG).show();
@@ -163,7 +195,7 @@ userMarker=mMap.addMarker(new MarkerOptions().position(new LatLng(0,0)).icon(Bit
                     PlaceModel place = snapshot.getValue(PlaceModel.class);
                     placeList.add(place);
                     LatLng placeLatLng=new LatLng(place.Longitude,place.Latitude);
-                    mMap.addMarker(new MarkerOptions().position(placeLatLng).title(place.LocName));
+                    mMap.addMarker(new MarkerOptions().position(placeLatLng).title(place.LocName).snippet(place.Description));
                 }
 
             }
@@ -174,5 +206,36 @@ userMarker=mMap.addMarker(new MarkerOptions().position(new LatLng(0,0)).icon(Bit
         Log.i("logi",databaseError.getMessage());
         }
     };
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mapView.onResume();
+    }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mapView.onStart();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mapView.onStop();
+    }
+    @Override
+    protected void onPause() {
+        mapView.onPause();
+        super.onPause();
+    }
+    @Override
+    protected void onDestroy() {
+        mapView.onDestroy();
+        super.onDestroy();
+    }
+    @Override
+    public void onLowMemory() {
+        super.onLowMemory();
+        mapView.onLowMemory();
+    }
 }

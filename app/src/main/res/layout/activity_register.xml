@@ -49,9 +49,11 @@
         android:id="@+id/regButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/common_google_signin_btn_icon_dark_normal_background"
         android:onClick="register"
         android:text="Zarejestruj"
+        android:background="#096A77"
+        android:textColor="#F1EAEA"
+        android:fontFamily="serif"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/regRepeatPassword" />
